@@ -92,9 +92,6 @@ public:
 
   int calls_active(std::vector<Call *> calls) override
   {
-    int num = calls.size();
-    std::string s = std::to_string(num);
-    this->active_calls->Add({}).Set(num);
     std::map<std::string, int> callsPerSystem;
 
     auto ret = 0;
