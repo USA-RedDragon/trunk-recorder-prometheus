@@ -113,7 +113,6 @@ public:
       }
 
       this->calls_counter->Add({
-        {"call_id", std::to_string(call->get_call_num())},
         {"call_system", callSystem},
         {"encrypted", std::to_string(call->get_encrypted())},
         {"talkgroup", std::to_string(call->get_talkgroup())},
