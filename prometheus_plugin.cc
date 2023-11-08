@@ -42,6 +42,7 @@ class Prometheus : public Plugin_Api
 
   prometheus::Family<prometheus::Counter> *http_requests_counter;
   prometheus::Family<prometheus::Gauge> *active_calls;
+  prometheus::Family<prometheus::Counter> *calls_counter;
 
 public:
   // Factory method
@@ -69,6 +70,11 @@ public:
                           .Help("Number of active calls")
                           .Register(*registry);
 
+    this->calls_counter = &BuildCounter()
+                          .Name("calls")
+                          .Help("Call history")
+                          .Register(*registry);
+
     this->http_requests_counter = &BuildCounter()
                                   .Name("http_requests_total")
                                   .Help("Number of HTTP requests served")
@@ -89,22 +95,42 @@ public:
     int num = calls.size();
     std::string s = std::to_string(num);
     this->active_calls->Add({}).Set(num);
+    std::map<std::string, int> callsPerSystem;
 
     auto ret = 0;
     for (std::vector<Call *>::iterator it = calls.begin(); it != calls.end(); it++)
     {
       Call *call = *it;
-      this->active_calls->Add({
+
+      std::string callSystem = call->get_system()->get_short_name();
+      if (callsPerSystem.find(callSystem) == callsPerSystem.end())
+      {
+        callsPerSystem[callSystem] = 1;
+      }
+      else
+      {
+        callsPerSystem[callSystem] += 1;
+      }
+
+      this->calls_counter->Add({
         {"call_id", std::to_string(call->get_call_num())},
-        {"call_system", call->get_system()->get_short_name()},
+        {"call_system", callSystem},
         {"encrypted", std::to_string(call->get_encrypted())},
         {"talkgroup", std::to_string(call->get_talkgroup())},
       }).Increment();
+
       ret = this->update_call_metrics(call);
       if (ret != 0)
       {
         return ret;
       }
+    }
+
+    for (auto& callPerSystem : callsPerSystem)
+    {
+      this->active_calls->Add({
+        {"system", callPerSystem.first},
+      }).Set(callPerSystem.second);
     }
     return ret;
   }
