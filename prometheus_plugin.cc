@@ -39,222 +39,22 @@ class Prometheus : public Plugin_Api
   uint16_t port;
   prometheus::Exposer *exposer;
   std::shared_ptr<prometheus::Registry> registry;
-  prometheus::Family<prometheus::Counter> *http_requests_counter;
 
-protected:
+  prometheus::Family<prometheus::Counter> *http_requests_counter;
+  prometheus::Family<prometheus::Gauge> *active_calls;
 
 public:
-  Prometheus()
+  // Factory method
+  static boost::shared_ptr<Prometheus> create()
   {
+    return boost::shared_ptr<Prometheus>(new Prometheus());
   }
 
-  void send_config(std::vector<Source *> sources, std::vector<System *> systems)
+  int parse_config(boost::property_tree::ptree &cfg) override
   {
-    boost::property_tree::ptree root;
-    boost::property_tree::ptree systems_node;
-    boost::property_tree::ptree sources_node;
+    this->port = cfg.get<uint16_t>("port", 9842);
+    BOOST_LOG_TRIVIAL(info) << " Prometheus Plugin Port: " << std::to_string(this->port);
 
-    for (std::vector<Source *>::iterator it = sources.begin(); it != sources.end(); it++)
-    {
-      Source *source = *it;
-      std::vector<Gain_Stage_t> gain_stages;
-      boost::property_tree::ptree source_node;
-      source_node.put("source_num", source->get_num());
-      source_node.put("antenna", source->get_antenna());
-
-      source_node.put("silence_frames", source->get_silence_frames());
-
-      source_node.put("min_hz", source->get_min_hz());
-      source_node.put("max_hz", source->get_max_hz());
-      source_node.put("center", source->get_center());
-      source_node.put("rate", source->get_rate());
-      source_node.put("driver", source->get_driver());
-      source_node.put("device", source->get_device());
-      source_node.put("error", source->get_error());
-      source_node.put("gain", source->get_gain());
-      gain_stages = source->get_gain_stages();
-      for (std::vector<Gain_Stage_t>::iterator gain_it = gain_stages.begin(); gain_it != gain_stages.end(); gain_it++)
-      {
-        source_node.put(gain_it->stage_name + "_gain", gain_it->value);
-      }
-      source_node.put("antenna", source->get_antenna());
-      source_node.put("analog_recorders", source->analog_recorder_count());
-      source_node.put("digital_recorders", source->digital_recorder_count());
-      source_node.put("debug_recorders", source->debug_recorder_count());
-      source_node.put("sigmf_recorders", source->sigmf_recorder_count());
-      sources_node.push_back(std::make_pair("", source_node));
-    }
-
-    for (std::vector<System *>::iterator it = systems.begin(); it != systems.end(); ++it)
-    {
-      System *sys = (System *)*it;
-
-      boost::property_tree::ptree sys_node;
-      boost::property_tree::ptree channels_node;
-      sys_node.put("audioArchive", sys->get_audio_archive());
-      sys_node.put("systemType", sys->get_system_type());
-      sys_node.put("shortName", sys->get_short_name());
-      sys_node.put("sysNum", sys->get_sys_num());
-      sys_node.put("uploadScript", sys->get_upload_script());
-      sys_node.put("recordUnkown", sys->get_record_unknown());
-      sys_node.put("callLog", sys->get_call_log());
-      sys_node.put("talkgroupsFile", sys->get_talkgroups_file());
-      sys_node.put("analog_levels", sys->get_analog_levels());
-      sys_node.put("digital_levels", sys->get_digital_levels());
-      sys_node.put("qpsk", sys->get_qpsk_mod());
-      sys_node.put("squelch_db", sys->get_squelch_db());
-      std::vector<double> channels;
-
-      if ((sys->get_system_type() == "conventional") || (sys->get_system_type() == "conventionalP25"))
-      {
-        channels = sys->get_channels();
-      }
-      else
-      {
-        channels = sys->get_control_channels();
-      }
-
-      // std::cout << "starts: " << std::endl;
-
-      for (std::vector<double>::iterator chan_it = channels.begin(); chan_it != channels.end(); chan_it++)
-      {
-        double channel = *chan_it;
-        boost::property_tree::ptree channel_node;
-        // std::cout << "Hello: " << channel << std::endl;
-        channel_node.put("", channel);
-
-        // Add this node to the list.
-        channels_node.push_back(std::make_pair("", channel_node));
-      }
-      sys_node.add_child("channels", channels_node);
-
-      if (sys->get_system_type() == "smartnet")
-      {
-        sys_node.put("bandplan", sys->get_bandplan());
-        sys_node.put("bandfreq", sys->get_bandfreq());
-        sys_node.put("bandplan_base", sys->get_bandplan_base());
-        sys_node.put("bandplan_high", sys->get_bandplan_high());
-        sys_node.put("bandplan_spacing", sys->get_bandplan_spacing());
-        sys_node.put("bandplan_offset", sys->get_bandplan_offset());
-      }
-      systems_node.push_back(std::make_pair("", sys_node));
-    }
-    root.add_child("sources", sources_node);
-    root.add_child("systems", systems_node);
-    root.put("captureDir", this->config->capture_dir);
-    root.put("uploadServer", this->config->upload_server);
-
-    // root.put("defaultMode", default_mode);
-    root.put("callTimeout", this->config->call_timeout);
-    root.put("logFile", this->config->log_file);
-    root.put("instanceId", this->config->instance_id);
-    root.put("instanceKey", this->config->instance_key);
-    root.put("logFile", this->config->log_file);
-    root.put("type", "config");
-
-    if (this->config->broadcast_signals == true)
-    {
-      root.put("broadcast_signals", this->config->broadcast_signals);
-    }
-
-    send_object(root, "config", "config", true);
-
-    // Send the recorders in addition to the config, cause there isn't a better place to do it.
-    std::vector<Recorder *> recorders;
-
-    for (std::vector<Source *>::iterator it = sources.begin(); it != sources.end(); it++) {
-      Source *source = *it;
-
-      std::vector<Recorder *> sourceRecorders = source->get_recorders();
-
-      recorders.insert(recorders.end(), sourceRecorders.begin(), sourceRecorders.end());
-    }
-
-    send_recorders(recorders);
-  }
-
-  int send_systems(std::vector<System *> systems)
-  {
-
-    boost::property_tree::ptree node;
-
-    for (std::vector<System *>::iterator it = systems.begin(); it != systems.end(); it++)
-    {
-      System *system = *it;
-      node.push_back(std::make_pair("", system->get_stats()));
-    }
-    return send_object(node, "systems", "systems", true);
-  }
-
-  int send_system(System *system)
-  {
-
-    return send_object(system->get_stats(), "system", "system");
-  }
-
-  int calls_active(std::vector<Call *> calls) override
-  {
-
-    boost::property_tree::ptree node;
-
-    for (std::vector<Call *>::iterator it = calls.begin(); it != calls.end(); it++)
-    {
-      Call *call = *it;
-      // if (call->get_state() == RECORDING) {
-      node.push_back(std::make_pair("", call->get_stats()));
-      //}
-    }
-
-    return send_object(node, "calls", "calls_active");
-  }
-
-  int send_recorders(std::vector<Recorder *> recorders)
-  {
-
-    boost::property_tree::ptree node;
-
-    for (std::vector<Recorder *>::iterator it = recorders.begin(); it != recorders.end(); it++)
-    {
-      Recorder *recorder = *it;
-      node.push_back(std::make_pair("", recorder->get_stats()));
-    }
-
-    return send_object(node, "recorders", "recorders",true);
-  }
-
-  int call_start(Call *call) override
-  {
-
-    return send_object(call->get_stats(), "call", "call_start");
-  }
-
-  int call_end(Call_Data_t call_info) override
-  {
-
-    return 0;
-  }
-
-  int send_recorder(Recorder *recorder)
-  {
-
-    return send_object(recorder->get_stats(), "recorder", "recorder");
-  }
-
-  int send_object(boost::property_tree::ptree data, std::string name, std::string type, bool retain = false)
-  {
-    this->http_requests_counter->Add({}).Increment();
-    boost::property_tree::ptree root;
-    root.add_child(name, data);
-    root.put("type", type);
-
-    std::stringstream stats_str;
-    boost::property_tree::write_json(stats_str, root);
-
-    return 0;
-  }
-
-  int poll_one() override
-  {
     return 0;
   }
 
@@ -264,9 +64,14 @@ public:
     this->exposer = new Exposer(std::to_string(this->port));
     this->registry = std::make_shared<Registry>();
 
+    this->active_calls = &BuildGauge()
+                          .Name("active_calls")
+                          .Help("Number of active calls")
+                          .Register(*registry);
+
     this->http_requests_counter = &BuildCounter()
                                   .Name("http_requests_total")
-                                  .Help("Number of HTTP requests")
+                                  .Help("Number of HTTP requests served")
                                   .Register(*registry);
 
     this->exposer->RegisterCollectable(this->registry);
@@ -279,47 +84,130 @@ public:
     return 0;
   }
 
+  int calls_active(std::vector<Call *> calls) override
+  {
+    int num = calls.size();
+    std::string s = std::to_string(num);
+    this->active_calls->Add({}).Set(num);
+
+    auto ret = 0;
+    for (std::vector<Call *>::iterator it = calls.begin(); it != calls.end(); it++)
+    {
+      Call *call = *it;
+      this->active_calls->Add({
+        {"call_id", std::to_string(call->get_call_num())},
+        {"call_system", call->get_system()->get_short_name()},
+        {"encrypted", std::to_string(call->get_encrypted())},
+        {"talkgroup", std::to_string(call->get_talkgroup())},
+      }).Increment();
+      ret = this->update_call_metrics(call);
+      if (ret != 0)
+      {
+        return ret;
+      }
+    }
+    return ret;
+  }
+
+  int call_start(Call *call) override
+  {
+    return this->update_call_metrics(call);
+  }
+
+  int call_end(Call_Data_t call_info) override
+  {
+    return 0;
+  }
+
   int setup_recorder(Recorder *recorder) override
   {
-    this->send_recorder(recorder);
-    return 0;
+    return this->update_recorder_metrics(recorder);
   }
 
   int setup_system(System *system) override
   {
-    this->send_system(system);
-    return 0;
+    return this->update_system_metrics(system);
   }
 
   int setup_systems(std::vector<System *> systems) override
   {
-
-    this->send_systems(systems);
-    return 0;
+    auto ret = 0;
+    for (std::vector<System *>::iterator it = systems.begin(); it != systems.end(); it++)
+    {
+      System *system = *it;
+      ret = this->update_system_metrics(system);
+      if (ret != 0)
+      {
+        return ret;
+      }
+    }
+    return ret;
   }
 
   int setup_config(std::vector<Source *> sources, std::vector<System *> systems) override
   {
-    send_config(sources, systems);
+    auto ret = 0;
+    for (std::vector<Source *>::iterator it = sources.begin(); it != sources.end(); it++)
+    {
+      Source *source = *it;
+      ret = this->update_source_metrics(source);
+      if (ret != 0)
+      {
+        return ret;
+      }
+    }
+    for (std::vector<System *>::iterator it = systems.begin(); it != systems.end(); it++)
+    {
+      System *system = *it;
+      ret = this->update_system_metrics(system);
+      if (ret != 0)
+      {
+        return ret;
+      }
+    }
+    return ret;
+  }
+
+  int poll_one() override
+  {
     return 0;
   }
 
-  // Factory method
-  static boost::shared_ptr<Prometheus> create()
+  int system_rates(std::vector<System *> systems, float timeDiff) override
   {
-    return boost::shared_ptr<Prometheus>(
-        new Prometheus());
-  }
-
-  int parse_config(boost::property_tree::ptree &cfg) override
-  {
-
-    this->port = cfg.get<uint16_t>("port", 9842);
-    BOOST_LOG_TRIVIAL(info) << " Prometheus Plugin Port: " << std::to_string(this->port);
-
+    BOOST_LOG_TRIVIAL(info) << "Updating system rates";
     return 0;
   }
 
+protected:
+
+  int update_call_metrics(Call * call) {
+    this->http_requests_counter->Add({}).Increment();
+    BOOST_LOG_TRIVIAL(info) << "Updating call metrics";
+    return 0;
+  }
+
+  int update_recorder_metrics(Recorder * recorder) {
+    this->http_requests_counter->Add({}).Increment();
+    BOOST_LOG_TRIVIAL(info) << "Updating recorder metrics";
+    return 0;
+  }
+
+  int update_system_metrics(System * system) {
+    this->http_requests_counter->Add({}).Increment();
+    auto stats = system->get_stats();
+    for (auto& stat : stats)
+    {
+      BOOST_LOG_TRIVIAL(info) << "Updating system metric: " << stat.first.c_str();
+    }
+    return 0;
+  }
+
+  int update_source_metrics(Source * sources) {
+    this->http_requests_counter->Add({}).Increment();
+    BOOST_LOG_TRIVIAL(info) << "Updating source metrics";
+    return 0;
+  }
 };
 
 BOOST_DLL_ALIAS(
