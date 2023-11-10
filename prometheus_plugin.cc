@@ -152,26 +152,6 @@ public:
     return this->update_recorder_metrics(recorder);
   }
 
-  int setup_system(System *system) override
-  {
-    return this->update_system_metrics(system);
-  }
-
-  int setup_systems(std::vector<System *> systems) override
-  {
-    auto ret = 0;
-    for (std::vector<System *>::iterator it = systems.begin(); it != systems.end(); it++)
-    {
-      System *system = *it;
-      ret = this->update_system_metrics(system);
-      if (ret != 0)
-      {
-        return ret;
-      }
-    }
-    return ret;
-  }
-
   int setup_config(std::vector<Source *> sources, std::vector<System *> systems) override
   {
     auto ret = 0;
@@ -184,21 +164,7 @@ public:
         return ret;
       }
     }
-    for (std::vector<System *>::iterator it = systems.begin(); it != systems.end(); it++)
-    {
-      System *system = *it;
-      ret = this->update_system_metrics(system);
-      if (ret != 0)
-      {
-        return ret;
-      }
-    }
     return ret;
-  }
-
-  int poll_one() override
-  {
-    return 0;
   }
 
   int system_rates(std::vector<System *> systems, float timeDiff) override
@@ -225,16 +191,6 @@ protected:
   int update_recorder_metrics(Recorder * recorder) {
     this->http_requests_counter->Add({}).Increment();
     BOOST_LOG_TRIVIAL(info) << "Updating recorder metrics";
-    return 0;
-  }
-
-  int update_system_metrics(System * system) {
-    this->http_requests_counter->Add({}).Increment();
-    auto stats = system->get_stats();
-    for (auto& stat : stats)
-    {
-      BOOST_LOG_TRIVIAL(info) << "Updating system metric: " << stat.first.c_str();
-    }
     return 0;
   }
 
