@@ -1,9 +1,9 @@
 #include <time.h>
 #include <vector>
 
-#include <trunk-recorder/source.h>
-#include <trunk-recorder/plugin_manager/plugin_api.h>
-#include <trunk-recorder/gr_blocks/decoder_wrapper.h>
+#include "trunk-recorder/source.h"
+#include "trunk-recorder/plugin_manager/plugin_api.h"
+#include "trunk-recorder/gr_blocks/decoder_wrapper.h"
 #include <boost/dll/alias.hpp> // for BOOST_DLL_ALIAS
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/log/trivial.hpp>
@@ -82,8 +82,8 @@ public:
                                   .Register(*registry);
 
     this->message_counter = &BuildCounter()
-                              .Name("decode_rate")
-                              .Help("Decode rate")
+                              .Name("message_decodes")
+                              .Help("Message decode count")
                               .Register(*registry);
 
     this->exposer->RegisterCollectable(this->registry);
