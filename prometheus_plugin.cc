@@ -43,6 +43,7 @@ class Prometheus : public Plugin_Api
   prometheus::Family<prometheus::Counter> *http_requests_counter;
   prometheus::Family<prometheus::Gauge> *active_calls;
   prometheus::Family<prometheus::Counter> *calls_counter;
+  prometheus::Family<prometheus::Counter> *message_counter;
 
 public:
   // Factory method
@@ -79,6 +80,11 @@ public:
                                   .Name("http_requests_total")
                                   .Help("Number of HTTP requests served")
                                   .Register(*registry);
+
+    this->message_counter = &BuildCounter()
+                              .Name("decode_rate")
+                              .Help("Decode rate")
+                              .Register(*registry);
 
     this->exposer->RegisterCollectable(this->registry);
 
@@ -197,7 +203,14 @@ public:
 
   int system_rates(std::vector<System *> systems, float timeDiff) override
   {
-    BOOST_LOG_TRIVIAL(info) << "Updating system rates";
+    for (std::vector<System *>::iterator it = systems.begin(); it != systems.end(); it++)
+    {
+      System *system = *it;
+      this->message_counter->Add({
+        {"system", system->get_short_name()}
+      }).Increment(system->get_message_count());
+    }
+
     return 0;
   }
 
