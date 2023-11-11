@@ -41,11 +41,14 @@ class Prometheus : public Plugin_Api
   std::shared_ptr<prometheus::Registry> registry;
 
   prometheus::Family<prometheus::Gauge> *active_calls;
+  prometheus::Family<prometheus::Gauge> *source_digital_recorders_gauge;
+  prometheus::Family<prometheus::Gauge> *source_analog_recorders_gauge;
   prometheus::Family<prometheus::Counter> *calls_counter;
   prometheus::Family<prometheus::Counter> *message_counter;
   prometheus::Family<prometheus::Counter> *spike_counter;
   prometheus::Family<prometheus::Counter> *error_counter;
   prometheus::Family<prometheus::Counter> *call_duration_counter;
+  prometheus::Family<prometheus::Counter> *source_error_counter;
 
 public:
   // Factory method
@@ -75,6 +78,16 @@ public:
                           .Help("Number of active calls")
                           .Register(*registry);
 
+    this->source_digital_recorders_gauge = &BuildGauge()
+                          .Name(prefix+"source_digital_recorders")
+                          .Help("Number of available digital recorders")
+                          .Register(*registry);
+
+    this->source_analog_recorders_gauge = &BuildGauge()
+                          .Name(prefix+"source_analog_recorders")
+                          .Help("Number of available analog recorders")
+                          .Register(*registry);
+
     this->calls_counter = &BuildCounter()
                           .Name(prefix+"calls")
                           .Help("Call history")
@@ -98,6 +111,11 @@ public:
     this->call_duration_counter = &BuildCounter()
                               .Name(prefix+"call_duration")
                               .Help("Call duration")
+                              .Register(*registry);
+
+    this->source_error_counter = &BuildCounter()
+                              .Name(prefix+"source_error_count")
+                              .Help("Source error count")
                               .Register(*registry);
 
     this->exposer->RegisterCollectable(this->registry);
@@ -206,12 +224,27 @@ protected:
   }
 
   int update_source_metrics(Source * sources) {
-    auto antenna = sources->get_antenna();
-    auto error = sources->get_error();
-    auto availDigitalRecorder = sources->get_num_available_digital_recorders();
-    auto availAnalogRecorders = sources->get_num_available_analog_recorders();
-    auto rate = sources->get_rate();
-    BOOST_LOG_TRIVIAL(info) << "Updating source metrics\n" << "Antenna: " << antenna << "\nError: " << error << "\nAvailDigitalRecorder: " << availDigitalRecorder << "\nAvailAnalogRecorders: " << availAnalogRecorders << "\nRate: " << rate;
+    this->source_error_counter->Add({
+      {"device", sources->get_device()},
+      {"driver", sources->get_driver()},
+      {"rate", std::to_string(sources->get_rate())},
+      {"antenna", sources->get_antenna()},
+    }).Increment(sources->get_error());
+
+    this->source_digital_recorders_gauge->Add({
+      {"device", sources->get_device()},
+      {"driver", sources->get_driver()},
+      {"rate", std::to_string(sources->get_rate())},
+      {"antenna", sources->get_antenna()},
+    }).Set(sources->get_num_available_digital_recorders());
+
+    this->source_analog_recorders_gauge->Add({
+      {"device", sources->get_device()},
+      {"driver", sources->get_driver()},
+      {"rate", std::to_string(sources->get_rate())},
+      {"antenna", sources->get_antenna()},
+    }).Set(sources->get_num_available_analog_recorders());
+
     return 0;
   }
 };
