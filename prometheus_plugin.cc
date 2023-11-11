@@ -44,6 +44,9 @@ class Prometheus : public Plugin_Api
   prometheus::Family<prometheus::Gauge> *active_calls;
   prometheus::Family<prometheus::Counter> *calls_counter;
   prometheus::Family<prometheus::Counter> *message_counter;
+  prometheus::Family<prometheus::Counter> *spike_counter;
+  prometheus::Family<prometheus::Counter> *error_counter;
+  prometheus::Family<prometheus::Counter> *call_duration_counter;
 
 public:
   // Factory method
@@ -66,7 +69,7 @@ public:
     this->exposer = new Exposer(std::to_string(this->port));
     this->registry = std::make_shared<Registry>();
 
-    auto prefix = "trunk_recorder_";
+    auto prefix = std::string("trunk_recorder_");
 
     this->active_calls = &BuildGauge()
                           .Name(prefix+"active_calls")
@@ -88,6 +91,21 @@ public:
                               .Help("Message decode count")
                               .Register(*registry);
 
+    this->spike_counter = &BuildCounter()
+                              .Name(prefix+"call_spike_count")
+                              .Help("Spike count")
+                              .Register(*registry);
+
+    this->error_counter = &BuildCounter()
+                              .Name(prefix+"call_error_count")
+                              .Help("Error count")
+                              .Register(*registry);
+
+    this->call_duration_counter = &BuildCounter()
+                              .Name(prefix+"call_duration")
+                              .Help("Call duration")
+                              .Register(*registry);
+
     this->exposer->RegisterCollectable(this->registry);
 
     return 0;
@@ -102,7 +120,6 @@ public:
   {
     std::map<std::string, int> callsPerSystem;
 
-    auto ret = 0;
     for (std::vector<Call *>::iterator it = calls.begin(); it != calls.end(); it++)
     {
       Call *call = *it;
@@ -122,12 +139,6 @@ public:
         {"encrypted", std::to_string(call->get_encrypted())},
         {"talkgroup", std::to_string(call->get_talkgroup())},
       }).Increment();
-
-      ret = this->update_call_metrics(call);
-      if (ret != 0)
-      {
-        return ret;
-      }
     }
 
     for (auto& callPerSystem : callsPerSystem)
@@ -136,17 +147,13 @@ public:
         {"system", callPerSystem.first},
       }).Set(callPerSystem.second);
     }
-    return ret;
-  }
 
-  int call_start(Call *call) override
-  {
-    return this->update_call_metrics(call);
+    return 0;
   }
 
   int call_end(Call_Data_t call_info) override
   {
-    return 0;
+    return this->update_call_end_metrics(&call_info);
   }
 
   int setup_recorder(Recorder *recorder) override
@@ -184,9 +191,28 @@ public:
 
 protected:
 
-  int update_call_metrics(Call * call) {
-    this->http_requests_counter->Add({}).Increment();
-    BOOST_LOG_TRIVIAL(info) << "Updating call metrics";
+  int update_call_end_metrics(Call_Data_t *call_info) {
+    //  {"system", call_info->system->get_short_name()},
+    this->call_duration_counter->Add({
+      {"encrypted", std::to_string(call_info->encrypted)},
+      {"talkgroup", std::to_string(call_info->talkgroup)},
+      {"freq", std::to_string(call_info->freq)},
+    }).Increment(call_info->length);
+
+    //  {"system", call_info->system->get_short_name()},
+    this->spike_counter->Add({
+      {"encrypted", std::to_string(call_info->encrypted)},
+      {"talkgroup", std::to_string(call_info->talkgroup)},
+      {"freq", std::to_string(call_info->freq)},
+    }).Increment(call_info->spike_count);
+
+    //  {"system", call_info->system->get_short_name()},
+    this->error_counter->Add({
+      {"encrypted", std::to_string(call_info->encrypted)},
+      {"talkgroup", std::to_string(call_info->talkgroup)},
+      {"freq", std::to_string(call_info->freq)},
+    }).Increment(call_info->error_count);
+
     return 0;
   }
 
@@ -205,5 +231,5 @@ protected:
 
 BOOST_DLL_ALIAS(
     Prometheus::create, // <-- this function is exported with...
-    create_plugin        // <-- ...this alias name
+    create_plugin       // <-- ...this alias name
 )
