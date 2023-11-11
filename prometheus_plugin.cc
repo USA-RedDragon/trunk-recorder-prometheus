@@ -40,7 +40,6 @@ class Prometheus : public Plugin_Api
   prometheus::Exposer *exposer;
   std::shared_ptr<prometheus::Registry> registry;
 
-  prometheus::Family<prometheus::Counter> *http_requests_counter;
   prometheus::Family<prometheus::Gauge> *active_calls;
   prometheus::Family<prometheus::Counter> *calls_counter;
   prometheus::Family<prometheus::Counter> *message_counter;
@@ -80,11 +79,6 @@ public:
                           .Name(prefix+"calls")
                           .Help("Call history")
                           .Register(*registry);
-
-    this->http_requests_counter = &BuildCounter()
-                                  .Name(prefix+"http_requests_total")
-                                  .Help("Number of HTTP requests served")
-                                  .Register(*registry);
 
     this->message_counter = &BuildCounter()
                               .Name(prefix+"message_decodes")
@@ -156,11 +150,6 @@ public:
     return this->update_call_end_metrics(&call_info);
   }
 
-  int setup_recorder(Recorder *recorder) override
-  {
-    return this->update_recorder_metrics(recorder);
-  }
-
   int setup_config(std::vector<Source *> sources, std::vector<System *> systems) override
   {
     auto ret = 0;
@@ -192,39 +181,37 @@ public:
 protected:
 
   int update_call_end_metrics(Call_Data_t *call_info) {
-    //  {"system", call_info->system->get_short_name()},
     this->call_duration_counter->Add({
       {"encrypted", std::to_string(call_info->encrypted)},
       {"talkgroup", std::to_string(call_info->talkgroup)},
       {"freq", std::to_string(call_info->freq)},
+      {"system", call_info->short_name},
     }).Increment(call_info->length);
 
-    //  {"system", call_info->system->get_short_name()},
     this->spike_counter->Add({
       {"encrypted", std::to_string(call_info->encrypted)},
       {"talkgroup", std::to_string(call_info->talkgroup)},
       {"freq", std::to_string(call_info->freq)},
+      {"system", call_info->short_name},
     }).Increment(call_info->spike_count);
 
-    //  {"system", call_info->system->get_short_name()},
     this->error_counter->Add({
       {"encrypted", std::to_string(call_info->encrypted)},
       {"talkgroup", std::to_string(call_info->talkgroup)},
       {"freq", std::to_string(call_info->freq)},
+      {"system", call_info->short_name},
     }).Increment(call_info->error_count);
 
     return 0;
   }
 
-  int update_recorder_metrics(Recorder * recorder) {
-    this->http_requests_counter->Add({}).Increment();
-    BOOST_LOG_TRIVIAL(info) << "Updating recorder metrics";
-    return 0;
-  }
-
   int update_source_metrics(Source * sources) {
-    this->http_requests_counter->Add({}).Increment();
-    BOOST_LOG_TRIVIAL(info) << "Updating source metrics";
+    auto antenna = sources->get_antenna();
+    auto error = sources->get_error();
+    auto availDigitalRecorder = sources->get_num_available_digital_recorders();
+    auto availAnalogRecorders = sources->get_num_available_analog_recorders();
+    auto rate = sources->get_rate();
+    BOOST_LOG_TRIVIAL(info) << "Updating source metrics\n" << "Antenna: " << antenna << "\nError: " << error << "\nAvailDigitalRecorder: " << availDigitalRecorder << "\nAvailAnalogRecorders: " << availAnalogRecorders << "\nRate: " << rate;
     return 0;
   }
 };
