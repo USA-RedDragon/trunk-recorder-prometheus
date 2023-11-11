@@ -1057,7 +1057,7 @@
               }
             ]
           },
-          "unit": "ms"
+          "unit": "µs"
         },
         "overrides": []
       },
@@ -1104,7 +1104,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "exposer_request_latencies_sum{service=\"$service\"} / exposer_request_latencies_count{service=\"$service\"}",
+          "expr": "rate(exposer_request_latencies_sum{service=\"$service\"}[$__rate_interval]) / rate(exposer_request_latencies_count{service=\"$service\"}[$__rate_interval])",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -1200,6 +1200,6 @@
   "timezone": "",
   "title": "Trunk-recorder",
   "uid": "f078861c-d709-4468-8195-4f21a421d2b3",
-  "version": 30,
+  "version": 32,
   "weekStart": ""
 }
