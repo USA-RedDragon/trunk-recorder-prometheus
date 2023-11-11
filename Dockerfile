@@ -3,11 +3,11 @@ FROM ubuntu:22.04 as prometheus-cpp-builder
 RUN apt update && export DEBIAN_FRONTEND=noninteractive && \
     apt install -y curl git cmake build-essential file zlib1g-dev && rm -rf /var/lib/apt/lists/*
 
+# renovate: datasource=github-tags depName=jupp0r/prometheus-cpp
 ARG PROMETHEUS_CPP_VERSION=v1.1.0
 
-RUN git clone https://github.com/jupp0r/prometheus-cpp /tmp/prometheus-cpp && \
+RUN git clone https://github.com/jupp0r/prometheus-cpp -b ${PROMETHEUS_CPP_VERSION} /tmp/prometheus-cpp && \
     cd /tmp/prometheus-cpp && \
-    git checkout ${PROMETHEUS_CPP_VERSION} && \
     git submodule init && \
     git submodule update && \
     mkdir build && \
