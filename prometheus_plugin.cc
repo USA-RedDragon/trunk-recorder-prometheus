@@ -66,23 +66,25 @@ public:
     this->exposer = new Exposer(std::to_string(this->port));
     this->registry = std::make_shared<Registry>();
 
+    auto prefix = "trunk_recorder_";
+
     this->active_calls = &BuildGauge()
-                          .Name("active_calls")
+                          .Name(prefix+"active_calls")
                           .Help("Number of active calls")
                           .Register(*registry);
 
     this->calls_counter = &BuildCounter()
-                          .Name("calls")
+                          .Name(prefix+"calls")
                           .Help("Call history")
                           .Register(*registry);
 
     this->http_requests_counter = &BuildCounter()
-                                  .Name("http_requests_total")
+                                  .Name(prefix+"http_requests_total")
                                   .Help("Number of HTTP requests served")
                                   .Register(*registry);
 
     this->message_counter = &BuildCounter()
-                              .Name("message_decodes")
+                              .Name(prefix+"message_decodes")
                               .Help("Message decode count")
                               .Register(*registry);
 
