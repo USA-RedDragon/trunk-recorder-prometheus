@@ -3,3 +3,4 @@ build/
 config.json
 Dockerfile
 README.md
+trunk-recorder/
