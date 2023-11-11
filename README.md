@@ -2,10 +2,6 @@
 
 This is a plugin for Trunk Recorder that publishes metrics in Prometheus format.
 
-## Fork note
-
-This uses [a fork of Trunk Recorder](https://github.com/USA-RedDragon/trunk-recorder/tree/main) until [this fix for SoapySDRPlay3](https://github.com/robotastic/trunk-recorder/pull/853) can be merged upstream, so upstream changes may be slightly delayed.
-
 ## Grafana Dashboard
 
 A Grafana dashboard is available [here](https://grafana.com/grafana/dashboards/19959) and also in the `grafana/dashboard.json` file in this repository.
