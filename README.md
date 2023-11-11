@@ -2,6 +2,10 @@
 
 This is a plugin for Trunk Recorder that publishes metrics in Prometheus format.
 
+## Grafana Dashboard
+
+A Grafana dashboard is available [here](https://grafana.com/grafana/dashboards/19959) and also in the `grafana/dashboard.json` file in this repository.
+
 ## Install
 
 1. **Build and install the current version of Trunk Recorder** following these [instructions](https://github.com/robotastic/trunk-recorder/blob/master/docs/INSTALL-LINUX.md). Make sure you do a `sudo make install` at the end to install the Trunk Recorder binary and libaries systemwide. The plugin will be built against these libraries.
