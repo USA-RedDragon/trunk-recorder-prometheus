@@ -10,6 +10,7 @@ A Grafana dashboard is available [here](https://grafana.com/grafana/dashboards/1
 
 <details>
 <summary>Dashboard Screenshot</summary>
+
 ![Grafana Dashboard](./grafana/dashboard.png)
 </details>
 
