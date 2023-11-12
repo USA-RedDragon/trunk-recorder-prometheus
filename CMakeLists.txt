@@ -66,8 +66,8 @@ include(FindPkgConfig)
 find_package(Gnuradio REQUIRED)
 include(GrVersion)
 
-set(GR_REQUIRED_COMPONENTS RUNTIME ANALOG BLOCKS DIGITAL FILTER FFT PMT)
-find_package(Gnuradio REQUIRED COMPONENTS runtime analog blocks digital filter fft)
+set(GR_REQUIRED_COMPONENTS RUNTIME ANALOG BLOCKS DIGITAL FILTER FFT PMT NETWORK)
+find_package(Gnuradio REQUIRED COMPONENTS runtime analog blocks digital filter fft network)
 if(Gnuradio_VERSION VERSION_LESS "3.8")
     find_package(Volk)
 endif()
@@ -166,6 +166,8 @@ include_directories(
     ${GNURADIO_OSMOSDR_INCLUDE_DIRS}
     ${CMAKE_BINARY_DIR}/lib
     ${CMAKE_BINARY_DIR}/include
+    ${CMAKE_INSTALL_PREFIX}/include
+    ${CMAKE_INSTALL_PREFIX}/include/trunk-recorder
     ${CMAKE_SOURCE_DIR}/lib/op25_repeater/lib
     ${CMAKE_SOURCE_DIR}/lib/op25_repeater/include
     ${OPENSSL_INCLUDE_DIR}
@@ -204,10 +206,11 @@ MODULE
   prometheus_plugin.cc
 )
 
-target_link_libraries(prometheus_plugin trunk-recorder ssl crypto prometheus-cpp::pull ${Boost_LIBRARIES} ${GNURADIO_PMT_LIBRARIES} ${GNURADIO_RUNTIME_LIBRARIES} ${GNURADIO_FILTER_LIBRARIES} ${GNURADIO_DIGITAL_LIBRARIES} ${GNURADIO_ANALOG_LIBRARIES} ${GNURADIO_AUDIO_LIBRARIES} ${GNURADIO_UHD_LIBRARIES} ${UHD_LIBRARIES} ${GNURADIO_BLOCKS_LIBRARIES} ${GNURADIO_OSMOSDR_LIBRARIES} ${LIBOP25_REPEATER_LIBRARIES} gnuradio-op25_repeater)
+target_link_libraries(prometheus_plugin trunk-recorder ssl crypto prometheus-cpp::pull ${Boost_LIBRARIES} ${GNURADIO_PMT_LIBRARIES} ${GNURADIO_RUNTIME_LIBRARIES} ${GNURADIO_FILTER_LIBRARIES} ${GNURADIO_DIGITAL_LIBRARIES} ${GNURADIO_ANALOG_LIBRARIES} ${GNURADIO_AUDIO_LIBRARIES} ${GNURADIO_UHD_LIBRARIES} ${UHD_LIBRARIES} ${GNURADIO_BLOCKS_LIBRARIES} ${GNURADIO_NETWORK_LIBRARIES} ${GNURADIO_OSMOSDR_LIBRARIES} ${LIBOP25_REPEATER_LIBRARIES} gnuradio-op25_repeater)
 
 if(NOT Gnuradio_VERSION VERSION_LESS "3.8")
     target_link_libraries(prometheus_plugin
+        gnuradio::gnuradio-network
         gnuradio::gnuradio-analog
         gnuradio::gnuradio-blocks
         gnuradio::gnuradio-digital

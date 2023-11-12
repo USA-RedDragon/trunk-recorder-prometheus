@@ -3,9 +3,9 @@
 
 #include "trunk-recorder/source.h"
 #include "trunk-recorder/plugin_manager/plugin_api.h"
+#include <trunk-recorder/json.hpp>
 #include "trunk-recorder/gr_blocks/decoder_wrapper.h"
 #include <boost/dll/alias.hpp> // for BOOST_DLL_ALIAS
-#include <boost/property_tree/json_parser.hpp>
 #include <boost/log/trivial.hpp>
 
 #include <iostream>
@@ -57,9 +57,9 @@ public:
     return boost::shared_ptr<Prometheus>(new Prometheus());
   }
 
-  int parse_config(boost::property_tree::ptree &cfg) override
+  int parse_config(json config_data)  override
   {
-    this->port = cfg.get<uint16_t>("port", 9842);
+    this->port = config_data.value("port", 9842);
     BOOST_LOG_TRIVIAL(info) << " Prometheus Plugin Port: " << std::to_string(this->port);
 
     return 0;
