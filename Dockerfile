@@ -18,7 +18,7 @@ RUN git clone https://github.com/jupp0r/prometheus-cpp -b ${PROMETHEUS_CPP_VERSI
     cd - && \
     rm -rf /tmp/prometheus-cpp
 
-FROM ghcr.io/robotastic/trunk-recorder:edge@sha256:aedf7507ae131a8b84208bc020da374dbf341a994b3483aff50f8489a5452e48
+FROM ghcr.io/robotastic/trunk-recorder:edge@sha256:54d5e5cb8e0801b3e2bb4b3e5846216c473822cefb26e5e702b3627991696bf6
 
 COPY --from=prometheus-cpp-builder /prometheus-cpp.deb /tmp/prometheus-cpp.deb
 RUN apt update && export DEBIAN_FRONTEND=noninteractive && \
