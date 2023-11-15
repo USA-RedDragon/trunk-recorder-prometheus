@@ -112,7 +112,7 @@
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "topk(5, rate(trunk_recorder_calls{service=\"$service\",call_system=\"$system\"}[${__range_s}s]))",
+          "expr": "topk(5, rate(trunk_recorder_calls{service=\"$service\",system=\"$system\"}[${__range_s}s]))",
           "fullMetaSearch": false,
           "includeNullMetadata": false,
           "instant": true,

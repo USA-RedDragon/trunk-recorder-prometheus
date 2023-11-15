@@ -136,7 +136,7 @@ public:
     {
       Call *call = *it;
 
-      std::string callSystem = call->get_system()->get_short_name();
+      std::string callSystem = call->get_short_name();
       if (callsPerSystem.find(callSystem) == callsPerSystem.end())
       {
         callsPerSystem[callSystem] = 1;
@@ -147,9 +147,12 @@ public:
       }
 
       this->calls_counter->Add({
-        {"call_system", callSystem},
         {"encrypted", std::to_string(call->get_encrypted())},
         {"talkgroup", std::to_string(call->get_talkgroup())},
+        {"talkgroup_display", call->get_talkgroup_display()},
+        {"talkgroup_tag", call->get_talkgroup_tag()},
+        {"freq", std::to_string(call->get_freq())},
+        {"system", callSystem},
       }).Increment();
     }
 
@@ -202,6 +205,8 @@ protected:
     this->call_duration_counter->Add({
       {"encrypted", std::to_string(call_info->encrypted)},
       {"talkgroup", std::to_string(call_info->talkgroup)},
+      {"talkgroup_display", call_info->talkgroup_display},
+      {"talkgroup_tag", call_info->talkgroup_alpha_tag},
       {"freq", std::to_string(call_info->freq)},
       {"system", call_info->short_name},
     }).Increment(call_info->length);
@@ -209,6 +214,8 @@ protected:
     this->spike_counter->Add({
       {"encrypted", std::to_string(call_info->encrypted)},
       {"talkgroup", std::to_string(call_info->talkgroup)},
+      {"talkgroup_display", call_info->talkgroup_display},
+      {"talkgroup_tag", call_info->talkgroup_alpha_tag},
       {"freq", std::to_string(call_info->freq)},
       {"system", call_info->short_name},
     }).Increment(call_info->spike_count);
@@ -216,6 +223,8 @@ protected:
     this->error_counter->Add({
       {"encrypted", std::to_string(call_info->encrypted)},
       {"talkgroup", std::to_string(call_info->talkgroup)},
+      {"talkgroup_display", call_info->talkgroup_display},
+      {"talkgroup_tag", call_info->talkgroup_alpha_tag},
       {"freq", std::to_string(call_info->freq)},
       {"system", call_info->short_name},
     }).Increment(call_info->error_count);
