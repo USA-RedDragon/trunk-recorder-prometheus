@@ -4,7 +4,7 @@ RUN apt update && export DEBIAN_FRONTEND=noninteractive && \
     apt install -y curl git cmake build-essential file zlib1g-dev && rm -rf /var/lib/apt/lists/*
 
 # renovate: datasource=github-tags depName=jupp0r/prometheus-cpp
-ARG PROMETHEUS_CPP_VERSION=v1.2.0
+ARG PROMETHEUS_CPP_VERSION=v1.2.1
 
 RUN git clone https://github.com/jupp0r/prometheus-cpp -b ${PROMETHEUS_CPP_VERSION} /tmp/prometheus-cpp && \
     cd /tmp/prometheus-cpp && \
