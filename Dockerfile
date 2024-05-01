@@ -32,10 +32,13 @@ COPY . .
 WORKDIR /src/trunk-recorder-prometheus/build
 
 RUN export DEBIAN_FRONTEND=noninteractive && \
+    apt-get update && \
     apt-get install --no-install-recommends --no-install-suggests -y \
-        cmake && \
+        cmake \
+        make \
+        build-essential && \
     cmake .. && make install && \
-    apt-get remove -y cmake && \
+    apt-get remove -y cmake make build-essential && \
     rm -rf /var/lib/apt/lists/*
     
 
