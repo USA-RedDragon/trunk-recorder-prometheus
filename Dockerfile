@@ -31,7 +31,12 @@ COPY . .
 
 WORKDIR /src/trunk-recorder-prometheus/build
 
-RUN cmake .. && make install
+RUN export DEBIAN_FRONTEND=noninteractive && \
+    apt-get install --no-install-recommends --no-install-suggests -y \
+        cmake && \
+    cmake .. && make install && \
+    apt-get remove -y cmake
+    
 
 RUN rm -rf /src/trunk-recorder-prometheus
 
