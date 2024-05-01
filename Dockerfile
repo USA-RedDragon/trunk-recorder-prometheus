@@ -35,7 +35,8 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get install --no-install-recommends --no-install-suggests -y \
         cmake && \
     cmake .. && make install && \
-    apt-get remove -y cmake
+    apt-get remove -y cmake && \
+    rm -rf /var/lib/apt/lists/*
     
 
 RUN rm -rf /src/trunk-recorder-prometheus
