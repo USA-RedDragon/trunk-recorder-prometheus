@@ -31,16 +31,23 @@ COPY . .
 
 WORKDIR /src/trunk-recorder-prometheus/build
 
-RUN export DEBIAN_FRONTEND=noninteractive && \
+RUN mv /etc/gnuradio/conf.d/gnuradio-runtime.conf /tmp/gnuradio-runtime.conf && \
+    export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
     apt-get install --no-install-recommends --no-install-suggests -y \
+        git \
         cmake \
         make \
-        build-essential && \
+        libssl-dev \
+        build-essential \
+        gnuradio-dev \
+        libuhd-dev \
+        libcurl4-openssl-dev \
+        libsndfile1-dev && \
     cmake .. && make install && \
-    apt-get remove -y cmake make build-essential && \
+    apt-get purge -y git cmake make libssl-dev build-essential gnuradio-dev libuhd-dev libcurl4-openssl-dev libsndfile1-dev && \
+    mv /tmp/gnuradio-runtime.conf /etc/gnuradio/conf.d/gnuradio-runtime.conf && \
     rm -rf /var/lib/apt/lists/*
-    
 
 RUN rm -rf /src/trunk-recorder-prometheus
 
