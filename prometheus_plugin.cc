@@ -4,7 +4,6 @@
 #include "trunk-recorder/source.h"
 #include "trunk-recorder/plugin_manager/plugin_api.h"
 #include <trunk-recorder/json.hpp>
-#include "trunk-recorder/gr_blocks/decoder_wrapper.h"
 #include <boost/dll/alias.hpp> // for BOOST_DLL_ALIAS
 #include <boost/log/trivial.hpp>
 
