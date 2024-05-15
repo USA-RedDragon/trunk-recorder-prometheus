@@ -22,7 +22,7 @@
 ########################################################################
 
 cmake_minimum_required(VERSION 3.12)
-project(Trunk-Recorder CXX C)
+project(Trunk-Recorder-Prometheus CXX C)
 
 # Select the release build type by default to get optimization flags
 if(NOT CMAKE_BUILD_TYPE)
@@ -31,17 +31,11 @@ if(NOT CMAKE_BUILD_TYPE)
 endif(NOT CMAKE_BUILD_TYPE)
 set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "")
 
-
-# Make sure our local CMake Modules path comes first
-list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake/Modules)
-
 # Set the version information here
-set(VERSION_MAJOR 4)
-set(VERSION_API   4)
+set(VERSION_MAJOR 1)
+set(VERSION_API   0)
 set(VERSION_ABI   0)
 set(VERSION_PATCH git)
-
-
 
 ########################################################################
 # Compiler specific setup
@@ -57,7 +51,6 @@ endif()
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib/trunk-recorder")
 
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-#SET(CMAKE_SKIP_BUILD_RPATH  FALSE)
 
 ########################################################################
 # Install directories
@@ -66,26 +59,23 @@ include(FindPkgConfig)
 find_package(Gnuradio REQUIRED)
 include(GrVersion)
 
-set(GR_REQUIRED_COMPONENTS RUNTIME ANALOG BLOCKS DIGITAL FILTER FFT PMT NETWORK)
-find_package(Gnuradio REQUIRED COMPONENTS runtime analog blocks digital filter fft network)
+set(GR_REQUIRED_COMPONENTS RUNTIME ANALOG BLOCKS FILTER FFT)
+find_package(Gnuradio REQUIRED COMPONENTS runtime analog blocks filter fft)
 if(Gnuradio_VERSION VERSION_LESS "3.8")
     find_package(Volk)
 endif()
 
-
 if(NOT CMAKE_MODULES_DIR)
   set(CMAKE_MODULES_DIR lib${LIB_SUFFIX}/cmake)
 endif(NOT CMAKE_MODULES_DIR)
-
 
 if(Gnuradio_VERSION VERSION_LESS "3.8")
     find_package(Volk)
 endif()
 
 if(NOT Gnuradio_FOUND)
-    message(FATAL_ERROR "GnuRadio Runtime required to compile gqrx")
+    message(FATAL_ERROR "GnuRadio Runtime required to build " ${CMAKE_PROJECT_NAME})
 endif()
-
 
 set(GR_RUNTIME_DIR      bin)
 set(GR_LIBRARY_DIR      lib${LIB_SUFFIX})
@@ -107,10 +97,6 @@ message(STATUS "GnuRadio Version: " ${GNURADIO_VERSION})
 ########################################################################
 # Find build dependencies
 ########################################################################
-find_package(GnuradioUHD)
-find_package(GnuradioOsmosdr)
-find_package(LibHackRF)
-find_package(LibUHD)
 find_package(OpenSSL REQUIRED)
 find_package(CURL REQUIRED)
 find_package(prometheus-cpp CONFIG REQUIRED)
@@ -119,18 +105,6 @@ find_package(prometheus-cpp CONFIG REQUIRED)
 # Setup boost
 ########################################################################
 MESSAGE(STATUS "Configuring Boost C++ Libraries...")
-
-# Although not required on my system, some users have linking issues without
-SET(BOOST_REQUIRED_COMPONENTS
-    thread
-    system
-    program_options
-    filesystem
-    log_setup
-    log
-    regex
-    random
-)
 
 if(UNIX AND NOT BOOST_ROOT AND EXISTS "/usr/lib64")
     list(APPEND BOOST_LIBRARYDIR "/usr/lib64") #fedora 64-bit fix
@@ -147,7 +121,7 @@ set(Boost_ADDITIONAL_VERSIONS
     "1.70.0" "1.70" "1.71.0" "1.71" "1.72.0" "1.72" "1.73.0" "1.73" "1.74.0" "1.74"
 )
 
-find_package(Boost COMPONENTS ${BOOST_REQUIRED_COMPONENTS} REQUIRED)
+find_package(Boost REQUIRED)
 
 if(NOT Boost_FOUND)
     message(FATAL_ERROR "Boost required to build " ${CMAKE_PROJECT_NAME})
@@ -163,23 +137,16 @@ add_definitions(-DGNURADIO_VERSION=${GNURADIO_VERSION})
 include_directories(
     ${Boost_INCLUDE_DIRS}
     ${GNURADIO_RUNTIME_INCLUDE_DIRS}
-    ${GNURADIO_OSMOSDR_INCLUDE_DIRS}
     ${CMAKE_BINARY_DIR}/lib
     ${CMAKE_BINARY_DIR}/include
     ${CMAKE_INSTALL_PREFIX}/include
     ${CMAKE_INSTALL_PREFIX}/include/trunk-recorder
-    ${CMAKE_SOURCE_DIR}/lib/op25_repeater/lib
-    ${CMAKE_SOURCE_DIR}/lib/op25_repeater/include
     ${OPENSSL_INCLUDE_DIR}
     ${CURL_INCLUDE_DIR}
     "lib"
 )
-#    ${PROTOBUF_INCLUDE_DIR}
-#    ${GRPC_INCLUDE_DIR}
-#)
 
 link_directories(
-    ${Boost_LIBRARY_DIRS}
     ${OPENSSL_ROOT_DIR}/lib
     ${CMAKE_INSTALL_PREFIX}/lib/trunk-recorder
 )
@@ -190,32 +157,22 @@ SET(CMAKE_CXX_STANDARD 11)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -Wno-narrowing -fvisibility=hidden -fPIC")
 
-
 include(GNUInstallDirs)
 include_directories("/usr/local/include")
-
-
-#target_compile_options(
-#    imbe_vocoder PRIVATE
-#    "-w"
-#)
-
 
 add_library(prometheus_plugin
 MODULE
   prometheus_plugin.cc
 )
 
-target_link_libraries(prometheus_plugin trunk-recorder ssl crypto prometheus-cpp::pull ${Boost_LIBRARIES} ${GNURADIO_PMT_LIBRARIES} ${GNURADIO_RUNTIME_LIBRARIES} ${GNURADIO_FILTER_LIBRARIES} ${GNURADIO_DIGITAL_LIBRARIES} ${GNURADIO_ANALOG_LIBRARIES} ${GNURADIO_AUDIO_LIBRARIES} ${GNURADIO_UHD_LIBRARIES} ${UHD_LIBRARIES} ${GNURADIO_BLOCKS_LIBRARIES} ${GNURADIO_NETWORK_LIBRARIES} ${GNURADIO_OSMOSDR_LIBRARIES} ${LIBOP25_REPEATER_LIBRARIES} gnuradio-op25_repeater)
+target_link_libraries(prometheus_plugin trunk-recorder ssl crypto prometheus-cpp::pull ${Boost_LIBRARIES} ${GNURADIO_RUNTIME_LIBRARIES})
 
 if(NOT Gnuradio_VERSION VERSION_LESS "3.8")
     target_link_libraries(prometheus_plugin
-        gnuradio::gnuradio-network
         gnuradio::gnuradio-analog
         gnuradio::gnuradio-blocks
-        gnuradio::gnuradio-digital
         gnuradio::gnuradio-filter
-        gnuradio::gnuradio-pmt
+        gnuradio::gnuradio-fft
     )
 endif()
 
