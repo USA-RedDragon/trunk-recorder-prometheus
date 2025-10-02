@@ -1,4 +1,4 @@
-FROM ubuntu:22.04@sha256:5e14404dbc9df30fef8460020b99a3c0034241283912189fd4650e446d8d6c92 as prometheus-cpp-builder
+FROM ubuntu:22.04@sha256:a1af69f6c9bc3657289d23abff8ee360d2417d6cf69719e287822443dca3dc57 as prometheus-cpp-builder
 
 RUN apt update && export DEBIAN_FRONTEND=noninteractive && \
     apt install -y curl git cmake build-essential file zlib1g-dev && rm -rf /var/lib/apt/lists/*
